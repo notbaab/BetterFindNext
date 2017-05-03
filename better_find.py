@@ -38,6 +38,10 @@ def keep_region(view, region, selecting_full_word, scope_filters=["comment", "st
 
 # TODO: This needs to be way smarter. If the region for finding things exists
 # alredy, just add the next in the region, don't recompute everything again.
+# The flow for that will be:
+#       - Pull the current region
+#       - If empty, go through the find process.
+#       - else: add the next idx in the region to the selection?
 class BetterFindNext(sublime_plugin.TextCommand):
     """
     """
