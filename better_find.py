@@ -36,6 +36,8 @@ def keep_region(view, region, selecting_full_word, scope_filters=["comment", "st
     return keep and not check_if_any_scope(scope, scope_filters)
 
 
+# TODO: This needs to be way smarter. If the region for finding things exists
+# alredy, just add the next in the region, don't recompute everything again.
 class BetterFindNext(sublime_plugin.TextCommand):
     """
     """
@@ -64,22 +66,25 @@ class BetterFindNext(sublime_plugin.TextCommand):
         print(anchor_selection)
         print(anchor_selection)
 
+        # Add to the final selections depending on
+        final_selections = []
+
         if anchor_selection.size() == 0:
             # if the selection does not have a size, then we need to expand
             # the seleciton to the full word
-            word = self.view.word(anchor_selection)
+            starting_selection = self.view.word(anchor_selection)
             selecting_full_word = True
         else:
             # Else, take the full selection and treat that as the word
-            word = anchor_selection
+            starting_selection = anchor_selection
             selecting_full_word = False
 
-        print("word " + str(word) + " |")
-        print(self.view.substr(word))
+        print("word " + str(starting_selection) + " |")
+        print(self.view.substr(starting_selection))
 
         # check if the button was pressed while not over a word
         # TOOD: Should allow spaces?
-        if word.size() == 0 or self.view.substr(word).isspace():
+        if starting_selection.size() == 0 or self.view.substr(starting_selection).isspace():
             print("nada")
             return
 
@@ -87,12 +92,19 @@ class BetterFindNext(sublime_plugin.TextCommand):
         print("Current selctions")
         pprint(current_selections)
 
-        print(word)
-        selectionText = self.view.substr(word)
+        print(starting_selection)
+        selectionText = self.view.substr(starting_selection)
         print(selectionText)
         regions = self.view.find_all(selectionText, flags=sublime.LITERAL)
 
+        current_selection_idx = 0
+        for idx, region in enumerate(regions):
+            if region == starting_selection:
+                current_selection_idx = idx
+                next_selection_idx = (idx + 1) % len(regions)
+                break
         pprint(regions)
+        print("Idx %s" % idx)
 
         # TODO: Could be more efficient and more concise
         # self.view.sel().clear()
@@ -102,7 +114,17 @@ class BetterFindNext(sublime_plugin.TextCommand):
                 continue
             filtered_regions.append(region)
 
-        final_regions = [anchor_selection]
+        next_selection = regions[next_selection_idx]
+        print("here")
+        pprint(next_selection)
+
+        # TODO: This is so wrong it's not even funny, but it'll work for the moment
+        if selecting_full_word:
+            final_regions = [starting_selection]
+        else:
+            # TODO: This is where we need to handle looping back
+            final_regions = [starting_selection, next_selection]
+
         pprint(filtered_regions)
         for selection in current_selections:
             if selection in filtered_regions:
