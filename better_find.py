@@ -35,7 +35,8 @@ def has_region(view, key, operator=None, operand=None, match_all=False):
 def keep_region(view, region, selecting_full_word, scope_filters=["comment", "string"]):
     keep = True
     if selecting_full_word:
-        # if we are selecting the full word, make sure we didn't get
+        # if we are selecting the full word, make sure we didn't get partial matches
+        # like pprint when searching for print
         keep = check_if_full_word(view, region)
 
     scope = view.scope_name(region.b)
@@ -53,36 +54,21 @@ class BetterFindNext(sublime_plugin.TextCommand):
     """
     """
 
-    def run(self, edit):
+    def start(self):
         anchor_selection = self.view.sel()[-1]
-        self.view.erase_regions(REGION_KEY)
 
-        if anchor_selection.size() == 0:
-            # if the selection does not have a size, then we need to expand
-            # the seleciton to the full word
-            starting_selection = self.view.word(anchor_selection)
-            selecting_full_word = True
-        else:
-            # Else, take the full selection and treat that as the word
-            starting_selection = anchor_selection
-            selecting_full_word = False
+        starting_selection = self.view.word(anchor_selection)
+        selecting_full_word = True
 
         # check if the button was pressed while not over a word
         # TOOD: Should allow spaces?
         if starting_selection.size() == 0 or self.view.substr(starting_selection).isspace():
             return
 
-        current_selections = [s for s in self.view.sel()]
-
         selectionText = self.view.substr(starting_selection)
         regions = self.view.find_all(selectionText, flags=sublime.LITERAL)
 
-        for idx, region in enumerate(regions):
-
-                break
-
         # TODO: Could be more efficient and more concise
-        # self.view.sel().clear()
         # filtered_regions
         filtered_regions = []
         for region in regions:
@@ -90,26 +76,55 @@ class BetterFindNext(sublime_plugin.TextCommand):
                 continue
             filtered_regions.append(region)
 
+        pprint(filtered_regions)
+        pprint(starting_selection)
+
         for idx, region in enumerate(filtered_regions):
             if region == starting_selection:
                 next_selection_idx = (idx + 1) % len(filtered_regions)
+                next_selection = filtered_regions[next_selection_idx]
 
-        next_selection = filtered_regions[next_selection_idx]
+        self.set_next_sel(next_selection, next_selection_idx)
 
-        # TODO: This is so wrong it's not even funny, but it'll work for the moment
-        if selecting_full_word:
-            final_regions = [starting_selection]
-        else:
-            # TODO: This is where we need to handle looping back
-            final_regions = [starting_selection, next_selection]
+        # next_selection = filtered_regions[next_selection_idx]
+        # final_regions = [starting_selection]
 
-        for selection in current_selections:
-            if selection in filtered_regions:
-                final_regions.append(selection)
+        # for selection in current_selections:
+        #     if selection in filtered_regions:
+        #         final_regions.append(selection)
 
         self.view.add_regions(REGION_KEY, filtered_regions, "source")
-        self.view.sel().add_all(final_regions)
+        self.view.sel().add(starting_selection)
         self.view.show(self.view.sel()[-1])
+
+    # TODO: I only ever need the idx right?
+    def set_next_sel(self, region, next_idx):
+        print("here")
+        print(region)
+        self.view.settings().set('next_sel', {"next_region": (region.a, region.b),
+                                              "next_region_idx": next_idx})
+
+    def del_next_sel(self):
+        self.view.settings().erase('next_sel')
+
+    def get_next_sel(self):
+        sel = self.view.settings().get('next_sel')
+        return sublime.Region(sel["next_region"][0], sel["next_region"][1]), sel["next_region_idx"]
+
+    def run(self, edit, action="start"):
+        if action == "start":
+            self.start()
+            return
+        else:
+            sel, idx = self.get_next_sel()
+            regions = self.view.get_regions(REGION_KEY)
+            # TODO: Check the shit first
+            self.view.sel().add(regions[idx])
+            idx = (idx + 1) % len(regions)
+            self.set_next_sel(regions[idx], idx)
+            print("got it")
+            return
+
 
 class ClearBetterFindSelection(sublime_plugin.TextCommand):
     def run(self, edit):
