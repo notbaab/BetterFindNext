@@ -26,6 +26,12 @@ def check_if_any_scope(full_scope_string, scopes):
     return False
 
 
+def has_region(view, key, operator=None, operand=None, match_all=False):
+    regions = view.get_regions(operand)
+    log.debug("query_context: regions")
+    return bool(regions)
+
+
 def keep_region(view, region, selecting_full_word, scope_filters=["comment", "string"]):
     keep = True
     if selecting_full_word:
@@ -105,18 +111,14 @@ class BetterFindNext(sublime_plugin.TextCommand):
         self.view.sel().add_all(final_regions)
         self.view.show(self.view.sel()[-1])
 
+class BetterFindNextEventListener(sublime_plugin.EventListener):
 
-# class ClearRegions(sublime_plugin.EventListener):
+    def on_query_context(self, view, key, operator=None, operand=None, match_all=False):
+        if key == "has_region" and operand:
+            log.debug("query_context %s: %s, %s, %s", key, operator, operand, match_all)
+            return has_region(view, key, operator, operand, match_all)
 
-#     # def on_query_context(self, view, key, operator=None, operand=None, match_all=False):
-#     #     if key == "has_region":
-#     #         log.debug("query_context %s: %s, %s, %s", key, operator, operand, match_all)
-#     #         if operand:
-#     #             regions = view.get_regions(operand)
-#     #             log.debug("query_context: regions")
-#     #             return bool(regions)
+    # def on_selection_modified(self, view):
+    #     regions = view.get_regions(REGION_KEY)
 
-#     def on_selection_modified(self, view):
-#         regions = view.get_regions(REGION_KEY)
-#         # if regions:
-#         #     view.erase_regions(REGION_KEY)
+    #     #     view.erase_regions(REGION_KEY)
