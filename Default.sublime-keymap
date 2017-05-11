@@ -5,4 +5,10 @@
             { "key": "selector", "operator": "not_equal", "operand": "comment", "match_all": true }
         ]
     },
+    { "keys": ["escape"], "command": "clear_better_find_selection",
+        "context":
+        [
+            {"key": "has_region", "operand": "find_region"}
+        ]
+    }
 ]

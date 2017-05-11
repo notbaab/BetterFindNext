@@ -111,6 +111,19 @@ class BetterFindNext(sublime_plugin.TextCommand):
         self.view.sel().add_all(final_regions)
         self.view.show(self.view.sel()[-1])
 
+class ClearBetterFindSelection(sublime_plugin.TextCommand):
+    def run(self, edit):
+        if len(self.view.sel()) == 1:
+            single_selection = self.view.sel()[0]
+            end = single_selection.end()
+            single_selection.a = end - 1
+            single_selection.b = end - 1
+            self.view.sel().subtract(self.view.sel()[0])
+            self.view.sel().add(single_selection)
+
+        self.view.erase_regions(REGION_KEY)
+
+
 class BetterFindNextEventListener(sublime_plugin.EventListener):
 
     def on_query_context(self, view, key, operator=None, operand=None, match_all=False):
