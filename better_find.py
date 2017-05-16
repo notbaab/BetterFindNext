@@ -1,4 +1,3 @@
-from pprint import pprint
 import sublime
 import sublime_plugin
 
@@ -27,9 +26,7 @@ def check_if_any_scope(full_scope_string, scopes):
 
 
 def has_region(view, key, operator=None, operand=None, match_all=False):
-    regions = view.get_regions(operand)
-    log.debug("query_context: regions")
-    return bool(regions)
+    return bool(view.get_regions(operand))
 
 
 def keep_region(view, region, selecting_full_word, scope_filters=["comment", "string"]):
@@ -44,90 +41,97 @@ def keep_region(view, region, selecting_full_word, scope_filters=["comment", "st
     return keep and not check_if_any_scope(scope, scope_filters)
 
 
-# TODO: This needs to be way smarter. If the region for finding things exists
-# alredy, just add the next in the region, don't recompute everything again.
-# The flow for that will be:
-#       - Pull the current region
-#       - If empty, go through the find process.
-#       - else: add the next idx in the region to the selection?
-class BetterFindNext(sublime_plugin.TextCommand):
-    """
-    """
+def set_first_selection(view, region):
+    view.settings().set('start_sel', (region.a, region.b))
 
-    def start(self):
+
+def get_first_selection(view):
+    sel = view.settings().get('start_sel', (view.sel()[0].a, view.sel().b))
+    return sublime.Region(sel[0], sel[1])
+
+
+def del_first_selection(view):
+    view.settings().erase('start_sel')
+
+
+# TODO: I only ever need the idx right?
+def set_next_sel(view, region, next_idx):
+    view.settings().set('next_sel', {"next_region": (region.a, region.b),
+                                     "next_region_idx": next_idx})
+
+
+def del_next_sel(view):
+    view.settings().erase('next_sel')
+
+
+def get_next_sel(view):
+    sel = view.settings().get('next_sel')
+    return sublime.Region(sel["next_region"][0], sel["next_region"][1]), sel["next_region_idx"]
+
+
+class BetterFindNext(sublime_plugin.TextCommand):
+    def start(self, excluded_scopes):
+        """Starts the better find next operation
+
+        Uses the last selection (i.e. the furthest down the file) as the word to
+        start searching for. If the selection is empty, then it searches for the
+        full word under the cursor, if not, it takes the selection as is.
+
+        Main purpose is to setup the filtered regions so calls to add_next just
+        go to the next selection
+        """
         anchor_selection = self.view.sel()[-1]
 
         starting_selection = self.view.word(anchor_selection)
         selecting_full_word = True
 
         # check if the button was pressed while not over a word
-        # TOOD: Should allow spaces?
         if starting_selection.size() == 0 or self.view.substr(starting_selection).isspace():
             return
+
+        set_first_selection(self.view, starting_selection)
 
         selectionText = self.view.substr(starting_selection)
         regions = self.view.find_all(selectionText, flags=sublime.LITERAL)
 
-        # TODO: Could be more efficient and more concise
-        # filtered_regions
         filtered_regions = []
         for region in regions:
             if not keep_region(self.view, region, selecting_full_word):
                 continue
             filtered_regions.append(region)
 
-        pprint(filtered_regions)
-        pprint(starting_selection)
-
         for idx, region in enumerate(filtered_regions):
             if region == starting_selection:
                 next_selection_idx = (idx + 1) % len(filtered_regions)
                 next_selection = filtered_regions[next_selection_idx]
 
-        self.set_next_sel(next_selection, next_selection_idx)
-
-        # next_selection = filtered_regions[next_selection_idx]
-        # final_regions = [starting_selection]
-
-        # for selection in current_selections:
-        #     if selection in filtered_regions:
-        #         final_regions.append(selection)
+        set_next_sel(self.view, next_selection, next_selection_idx)
 
         self.view.add_regions(REGION_KEY, filtered_regions, "source")
         self.view.sel().add(starting_selection)
-        self.view.show(self.view.sel()[-1])
 
-    # TODO: I only ever need the idx right?
-    def set_next_sel(self, region, next_idx):
-        print("here")
-        print(region)
-        self.view.settings().set('next_sel', {"next_region": (region.a, region.b),
-                                              "next_region_idx": next_idx})
+    def add_next(self):
+        sel, idx = get_next_sel(self.view)
 
-    def del_next_sel(self):
-        self.view.settings().erase('next_sel')
+        # scroll the view to the next selection
+        self.view.show(sel)
+        regions = self.view.get_regions(REGION_KEY)
 
-    def get_next_sel(self):
-        sel = self.view.settings().get('next_sel')
-        return sublime.Region(sel["next_region"][0], sel["next_region"][1]), sel["next_region_idx"]
+        # TODO: Check the shit first
+        self.view.sel().add(regions[idx])
+        idx = (idx + 1) % len(regions)
+        set_next_sel(self.view, regions[idx], idx)
 
-    def run(self, edit, action="start"):
+    def run(self, edit, action="start", excluded_scopes=["comment", "string"]):
         if action == "start":
-            self.start()
-            return
-        else:
-            sel, idx = self.get_next_sel()
-            regions = self.view.get_regions(REGION_KEY)
-            # TODO: Check the shit first
-            self.view.sel().add(regions[idx])
-            idx = (idx + 1) % len(regions)
-            self.set_next_sel(regions[idx], idx)
-            print("got it")
-            return
+            self.start(excluded_scopes)
+        elif action == "add_next":
+            self.add_next()
 
 
 class ClearBetterFindSelection(sublime_plugin.TextCommand):
     def run(self, edit):
+        # TODO: Go back to starting selection maybe?
         if len(self.view.sel()) == 1:
             single_selection = self.view.sel()[0]
             end = single_selection.end()
@@ -140,13 +144,6 @@ class ClearBetterFindSelection(sublime_plugin.TextCommand):
 
 
 class BetterFindNextEventListener(sublime_plugin.EventListener):
-
     def on_query_context(self, view, key, operator=None, operand=None, match_all=False):
         if key == "has_region" and operand:
-            log.debug("query_context %s: %s, %s, %s", key, operator, operand, match_all)
             return has_region(view, key, operator, operand, match_all)
-
-    # def on_selection_modified(self, view):
-    #     regions = view.get_regions(REGION_KEY)
-
-    #     #     view.erase_regions(REGION_KEY)
