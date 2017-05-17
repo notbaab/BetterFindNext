@@ -1,13 +1,8 @@
+from functools import reduce
 import sublime
 import sublime_plugin
 
 REGION_KEY = "find_region"
-
-
-def get_region_under_last_cursor(view):
-    word_to_find = view.sel()[-1]
-    region = view.word(word_to_find)
-    return region
 
 
 def check_if_full_word(view, region):
@@ -15,18 +10,14 @@ def check_if_full_word(view, region):
     return view.word(region).size() == region.size()
 
 
-# TODO: Use match selector?
-def check_if_any_scope(full_scope_string, scopes):
-    # returns true if any of the scopes passed in are in the full scope string
-    for scope in scopes:
-        if scope in full_scope_string:
-            return True
-
-    return False
+def check_if_any_scope(full_scope_string, filtered_scopes):
+    """returns true if any of the scopes passed in are in the full scope string"""
+    return reduce(lambda acc, scope: acc + sublime.score_selector(full_scope_string, scope),
+                  filtered_scopes, 0)
 
 
-def has_region(view, key, operator=None, operand=None, match_all=False):
-    return bool(view.get_regions(operand))
+def has_region(view, region_name):
+    return bool(view.get_regions(region_name))
 
 
 def keep_region(view, region, selecting_full_word, scope_filters=["comment", "string"]):
@@ -143,7 +134,8 @@ class ClearBetterFindSelection(sublime_plugin.TextCommand):
         self.view.erase_regions(REGION_KEY)
 
 
-class BetterFindNextEventListener(sublime_plugin.EventListener):
-    def on_query_context(self, view, key, operator=None, operand=None, match_all=False):
+class BetterFindNextEventListener(sublime_plugin.ViewEventListener):
+    def on_query_context(self, key, operator=None, operand=None, match_all=False):
         if key == "has_region" and operand:
-            return has_region(view, key, operator, operand, match_all)
+            return has_region(self.view, operand)
+
