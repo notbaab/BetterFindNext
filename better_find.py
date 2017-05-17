@@ -155,3 +155,7 @@ class BetterFindNextEventListener(sublime_plugin.ViewEventListener):
         if key == "has_region" and operand:
             return has_region(self.view, operand)
 
+    def on_selection_modified_async(self):
+        # TODO: Need to intelligently remove the regions if they exist
+        if has_region(self.view, REGION_KEY) and self.view.sel()[0].empty():
+            self.view.erase_regions(REGION_KEY)
