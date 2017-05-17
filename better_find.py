@@ -113,11 +113,27 @@ class BetterFindNext(sublime_plugin.TextCommand):
         idx = (idx + 1) % len(regions)
         set_next_sel(self.view, regions[idx], idx)
 
-    def run(self, edit, action="start", excluded_scopes=["comment", "string"]):
+    def run(self, edit, action="", excluded_scopes=["comment", "string"]):
+
+        # I don't like enforcing the context parameters on users, it may not
+        # be straightforward.
+        if action == "":
+            action = self.determine_action_from_context()
+
         if action == "start":
             self.start(excluded_scopes)
         elif action == "add_next":
             self.add_next()
+        else:
+            print("Action not found")
+
+    def determine_action_from_context(self):
+        sels = self.view.sel()
+        if len(sels) == 1 and len(sels[0]) == 0:
+            return "start"
+
+        if has_region(self.view, REGION_KEY):
+            return "add_next"
 
 
 class ClearBetterFindSelection(sublime_plugin.TextCommand):
