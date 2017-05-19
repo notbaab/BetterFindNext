@@ -16,6 +16,16 @@ def check_if_any_scope(full_scope_string, filtered_scopes):
                   filtered_scopes, 0)
 
 
+def resize_region(view):
+    """Resizing will only work if every selection is the same
+    """
+    selections = view.sel()
+    previous_selection = view.substr(selections[0])
+    for selection in selections:
+        if previous_selection != view.substr(selection):
+            view.erase_regions(REGION_KEY)
+
+
 def has_region(view, region_name):
     return bool(view.get_regions(region_name))
 
@@ -37,7 +47,7 @@ def set_first_selection(view, region):
 
 
 def get_first_selection(view):
-    sel = view.settings().get('start_sel', (view.sel()[0].a, view.sel().b))
+    sel = view.settings().get('start_sel', (view.sel()[0].a, view.sel()[0].b))
     return sublime.Region(sel[0], sel[1])
 
 
@@ -106,9 +116,10 @@ class BetterFindNext(sublime_plugin.TextCommand):
 
         # scroll the view to the next selection
         self.view.show(sel)
+
         regions = self.view.get_regions(REGION_KEY)
 
-        # TODO: Check the shit first
+        # TODO: Check to make sure that a new region exists
         self.view.sel().add(regions[idx])
         idx = (idx + 1) % len(regions)
         set_next_sel(self.view, regions[idx], idx)
@@ -157,5 +168,11 @@ class BetterFindNextEventListener(sublime_plugin.ViewEventListener):
 
     def on_selection_modified_async(self):
         # TODO: Need to intelligently remove the regions if they exist
-        if has_region(self.view, REGION_KEY) and self.view.sel()[0].empty():
-            self.view.erase_regions(REGION_KEY)
+        if has_region(self.view, REGION_KEY):
+            cursor = self.view.sel()[0]
+            if cursor.empty():
+                self.view.erase_regions(REGION_KEY)
+                return
+
+            if cursor.size() != get_first_selection(self.view).size():
+                resize_region(self.view)
