@@ -10,7 +10,7 @@
     //         {"key": "has_region", "operand": "find_region"}
     //     ]
     // },
-    { "keys": ["ctrl+w"], "command": "better_find_next"},
+    { "keys": ["ctrl+w"], "command": "better_find_next", "args": {"excluded_scopes": ["comment", "string"]}},
     { "keys": ["alt+q"], "command": "better_find_next" , "context":
         [
             { "key": "selector", "operator": "not_equal", "operand": "comment", "match_all": true }
