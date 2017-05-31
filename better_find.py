@@ -19,7 +19,7 @@ def check_if_any_scope(full_scope_string, filtered_scopes):
 
 
 def recalculate_find_next_region(view):
-    """Resizing will only work if every selection is the same
+    """Resizing will only work if every selection is the same, else it removes the regions
     """
     selections = view.sel()
     previous_selection = view.substr(selections[0])
@@ -53,20 +53,24 @@ def has_region(view, region_name):
     return bool(view.get_regions(region_name))
 
 
+def find_index_of_selection(regions, selection):
+    next_selection_idx = None
+
+    for idx, region in enumerate(regions):
+        if region == selection:
+            next_selection_idx = (idx + 1) % len(regions)
+
+    return next_selection_idx
+
+
 def filter_regions(view, regions, selecting_full_word, starting_selection):
-    """
-    """
     filtered_regions = []
     for region in regions:
         if not keep_region(view, region, selecting_full_word):
             continue
         filtered_regions.append(region)
 
-    for idx, region in enumerate(filtered_regions):
-        if region == starting_selection:
-            next_selection_idx = (idx + 1) % len(filtered_regions)
-
-    return filtered_regions, next_selection_idx
+    return filtered_regions
 
 
 def keep_region(view, region, selecting_full_word, scope_filters=["comment", "string"]):
@@ -132,9 +136,10 @@ class BetterFindNext(sublime_plugin.TextCommand):
         selectionText = self.view.substr(starting_selection)
         regions = self.view.find_all(selectionText, flags=sublime.LITERAL)
 
-        filtered_regions, next_selection_idx = filter_regions(self.view, regions,
-                                                              expand_selection_to_word,
-                                                              starting_selection)
+        filtered_regions = filter_regions(self.view, regions, expand_selection_to_word,
+                                          starting_selection)
+
+        next_selection_idx = find_index_of_selection(filtered_regions, starting_selection)
 
         set_next_sel_idx(self.view, next_selection_idx)
 
@@ -142,16 +147,16 @@ class BetterFindNext(sublime_plugin.TextCommand):
         self.view.sel().add(starting_selection)
 
     def add_next(self):
+        regions = self.view.get_regions(REGION_KEY)
         idx = get_next_sel_idx(self.view)
+        next_sel = regions[idx]
 
         # scroll the view to the next selection
-
-        regions = self.view.get_regions(REGION_KEY)
-        sel = regions[idx]
-        self.view.show(sel)
+        self.view.show(next_sel)
 
         # TODO: Check to make sure that a new region exists
         self.view.sel().add(regions[idx])
+
         idx = (idx + 1) % len(regions)
         set_next_sel_idx(self.view, idx)
 
