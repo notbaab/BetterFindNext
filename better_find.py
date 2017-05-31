@@ -107,7 +107,7 @@ def get_next_sel(view):
 
 
 class BetterFindNext(sublime_plugin.TextCommand):
-    def start(self, excluded_scopes):
+    def start(self, excluded_scopes, expand_selection_to_word):
         """Starts the better find next operation
 
         Uses the last selection (i.e. the furthest down the file) as the word to
@@ -119,15 +119,8 @@ class BetterFindNext(sublime_plugin.TextCommand):
         """
         starting_selection = self.view.sel()[-1]
 
-        # starting_selection = self.view.word(starting_selection)
-
-        # Select the full word if the selection isn't expanded
-        selecting_full_word = starting_selection.size() == 0
-
-        # Expand starting selection to the full word
-        if selecting_full_word:
+        if expand_selection_to_word:
             starting_selection = self.view.word(starting_selection)
-        print(selecting_full_word)
 
         # check if the button was pressed while not over a word
         if starting_selection.size() == 0 or self.view.substr(starting_selection).isspace():
@@ -141,7 +134,7 @@ class BetterFindNext(sublime_plugin.TextCommand):
         print(regions)
 
         filtered_regions, next_selection_idx = filter_regions(self.view, regions,
-                                                              selecting_full_word,
+                                                              expand_selection_to_word,
                                                               starting_selection)
         next_selection = filtered_regions[next_selection_idx]
 
@@ -170,8 +163,10 @@ class BetterFindNext(sublime_plugin.TextCommand):
         if action == "":
             action = self.determine_action_from_context()
 
-        if action == "start":
-            self.start(excluded_scopes)
+        if action == "start_full_word":
+            self.start(excluded_scopes, True)
+        elif action == "start_partial_selection":
+            self.start(excluded_scopes, False)
         elif action == "add_next":
             self.add_next()
         else:
@@ -179,11 +174,16 @@ class BetterFindNext(sublime_plugin.TextCommand):
 
     def determine_action_from_context(self):
         sels = self.view.sel()
-        if len(sels) == 1 and len(sels[0]) == 0:
-            return "start"
 
+        # Add next should resolve first
         if has_region(self.view, REGION_KEY):
             return "add_next"
+
+        # TODO: Do we only want to allow starting when a single cursor is there?
+        if len(sels) == 1 and len(sels[-1]) == 0:
+            return "start_full_word"
+        elif len(sels) == 1 and len(sels[-1]) != 0:
+            return "start_partial_selection"
 
 
 class ClearBetterFindSelection(sublime_plugin.TextCommand):
@@ -202,7 +202,6 @@ class ClearBetterFindSelection(sublime_plugin.TextCommand):
 
 class BetterFindNextEventListener(sublime_plugin.ViewEventListener):
     def on_query_context(self, key, operator=None, operand=None, match_all=False):
-        print("clreaing")
         if key == "has_region" and operand:
             return has_region(self.view, operand)
 
