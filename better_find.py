@@ -1,8 +1,10 @@
 from functools import reduce
 import sublime
 import sublime_plugin
+import logging
 
 REGION_KEY = "find_region"
+logger = logging.getLogger(__name__)
 
 
 def check_if_full_word(view, region):
@@ -167,7 +169,7 @@ class BetterFindNext(sublime_plugin.TextCommand):
         elif action == "add_next":
             self.add_next()
         else:
-            print("Action not found")
+            logger.error("Action %s not found", action)
 
     def determine_action_from_context(self):
         sels = self.view.sel()
