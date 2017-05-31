@@ -23,24 +23,25 @@ def recalculate_find_next_region(view):
     previous_selection = view.substr(selections[0])
     for selection in selections:
         if previous_selection != view.substr(selection):
-            print(previous_selection + "|" + view.substr(selection))
             # nothing matches, fuck it erase it
             view.erase_regions(REGION_KEY)
             return
 
     # so the selections are the same, get the next selection and shrink it
     # down to the new selection size and redue the find next region
-    new_size = selections[0].size()
     regions = view.get_regions(REGION_KEY)
-    next_selection, idx = get_next_sel(view)
-    print(type(next_selection))
+    idx = get_next_sel_idx(view)
+    next_selection = regions[idx]
+
+    new_size = selections[0].size()
     new_regions = []
+
     for region in regions:
         new_region = sublime.Region(region.begin(), region.begin() + new_size)
         new_regions.append(new_region)
 
         if next_selection.intersects(region):
-            set_next_sel(view, new_region, idx)
+            set_next_sel_idx(view, idx)
 
     view.erase_regions(REGION_KEY)
     view.add_regions(REGION_KEY, new_regions, "source")
@@ -91,19 +92,17 @@ def del_first_selection(view):
     view.settings().erase('start_sel')
 
 
-# TODO: I only ever need the idx right?
-def set_next_sel(view, region, next_idx):
-    view.settings().set('next_sel', {"next_region": (region.a, region.b),
-                                     "next_region_idx": next_idx})
+def set_next_sel_idx(view, next_idx):
+    view.settings().set('next_sel', {"next_region_idx": next_idx})
 
 
 def del_next_sel(view):
     view.settings().erase('next_sel')
 
 
-def get_next_sel(view):
+def get_next_sel_idx(view):
     sel = view.settings().get('next_sel')
-    return sublime.Region(sel["next_region"][0], sel["next_region"][1]), sel["next_region_idx"]
+    return sel["next_region_idx"]
 
 
 class BetterFindNext(sublime_plugin.TextCommand):
@@ -130,31 +129,29 @@ class BetterFindNext(sublime_plugin.TextCommand):
 
         selectionText = self.view.substr(starting_selection)
         regions = self.view.find_all(selectionText, flags=sublime.LITERAL)
-        print(starting_selection)
-        print(regions)
 
         filtered_regions, next_selection_idx = filter_regions(self.view, regions,
                                                               expand_selection_to_word,
                                                               starting_selection)
-        next_selection = filtered_regions[next_selection_idx]
 
-        set_next_sel(self.view, next_selection, next_selection_idx)
+        set_next_sel_idx(self.view, next_selection_idx)
 
         self.view.add_regions(REGION_KEY, filtered_regions, "source")
         self.view.sel().add(starting_selection)
 
     def add_next(self):
-        sel, idx = get_next_sel(self.view)
+        idx = get_next_sel_idx(self.view)
 
         # scroll the view to the next selection
-        self.view.show(sel)
 
         regions = self.view.get_regions(REGION_KEY)
+        sel = regions[idx]
+        self.view.show(sel)
 
         # TODO: Check to make sure that a new region exists
         self.view.sel().add(regions[idx])
         idx = (idx + 1) % len(regions)
-        set_next_sel(self.view, regions[idx], idx)
+        set_next_sel_idx(self.view, idx)
 
     def run(self, edit, action="", excluded_scopes=["comment", "string"]):
 
