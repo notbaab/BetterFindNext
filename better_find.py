@@ -16,18 +16,54 @@ def check_if_any_scope(full_scope_string, filtered_scopes):
                   filtered_scopes, 0)
 
 
-def resize_region(view):
+def recalculate_find_next_region(view):
     """Resizing will only work if every selection is the same
     """
     selections = view.sel()
     previous_selection = view.substr(selections[0])
     for selection in selections:
         if previous_selection != view.substr(selection):
+            print(previous_selection + "|" + view.substr(selection))
+            # nothing matches, fuck it erase it
             view.erase_regions(REGION_KEY)
+            return
+
+    # so the selections are the same, get the next selection and shrink it
+    # down to the new selection size and redue the find next region
+    new_size = selections[0].size()
+    regions = view.get_regions(REGION_KEY)
+    next_selection, idx = get_next_sel(view)
+    print(type(next_selection))
+    new_regions = []
+    for region in regions:
+        new_region = sublime.Region(region.begin(), region.begin() + new_size)
+        new_regions.append(new_region)
+
+        if next_selection.intersects(region):
+            set_next_sel(view, new_region, idx)
+
+    view.erase_regions(REGION_KEY)
+    view.add_regions(REGION_KEY, new_regions, "source")
 
 
 def has_region(view, region_name):
     return bool(view.get_regions(region_name))
+
+
+def filter_regions(view, regions, selecting_full_word, starting_selection):
+    """
+    """
+    filtered_regions = []
+    for region in regions:
+        if not keep_region(view, region, selecting_full_word):
+            continue
+        filtered_regions.append(region)
+
+    for idx, region in enumerate(filtered_regions):
+        if region == starting_selection:
+            next_selection_idx = (idx + 1) % len(filtered_regions)
+
+    return filtered_regions, next_selection_idx
 
 
 def keep_region(view, region, selecting_full_word, scope_filters=["comment", "string"]):
@@ -81,10 +117,17 @@ class BetterFindNext(sublime_plugin.TextCommand):
         Main purpose is to setup the filtered regions so calls to add_next just
         go to the next selection
         """
-        anchor_selection = self.view.sel()[-1]
+        starting_selection = self.view.sel()[-1]
 
-        starting_selection = self.view.word(anchor_selection)
-        selecting_full_word = True
+        # starting_selection = self.view.word(starting_selection)
+
+        # Select the full word if the selection isn't expanded
+        selecting_full_word = starting_selection.size() == 0
+
+        # Expand starting selection to the full word
+        if selecting_full_word:
+            starting_selection = self.view.word(starting_selection)
+        print(selecting_full_word)
 
         # check if the button was pressed while not over a word
         if starting_selection.size() == 0 or self.view.substr(starting_selection).isspace():
@@ -94,17 +137,13 @@ class BetterFindNext(sublime_plugin.TextCommand):
 
         selectionText = self.view.substr(starting_selection)
         regions = self.view.find_all(selectionText, flags=sublime.LITERAL)
+        print(starting_selection)
+        print(regions)
 
-        filtered_regions = []
-        for region in regions:
-            if not keep_region(self.view, region, selecting_full_word):
-                continue
-            filtered_regions.append(region)
-
-        for idx, region in enumerate(filtered_regions):
-            if region == starting_selection:
-                next_selection_idx = (idx + 1) % len(filtered_regions)
-                next_selection = filtered_regions[next_selection_idx]
+        filtered_regions, next_selection_idx = filter_regions(self.view, regions,
+                                                              selecting_full_word,
+                                                              starting_selection)
+        next_selection = filtered_regions[next_selection_idx]
 
         set_next_sel(self.view, next_selection, next_selection_idx)
 
@@ -163,8 +202,12 @@ class ClearBetterFindSelection(sublime_plugin.TextCommand):
 
 class BetterFindNextEventListener(sublime_plugin.ViewEventListener):
     def on_query_context(self, key, operator=None, operand=None, match_all=False):
+        print("clreaing")
         if key == "has_region" and operand:
             return has_region(self.view, operand)
+
+    def applies_to_primary_view_only():
+        return False
 
     def on_selection_modified_async(self):
         # TODO: Need to intelligently remove the regions if they exist
@@ -175,4 +218,4 @@ class BetterFindNextEventListener(sublime_plugin.ViewEventListener):
                 return
 
             if cursor.size() != get_first_selection(self.view).size():
-                resize_region(self.view)
+                recalculate_find_next_region(self.view)
