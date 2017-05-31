@@ -161,9 +161,8 @@ class BetterFindNext(sublime_plugin.TextCommand):
         set_next_sel_idx(self.view, idx)
 
     def run(self, edit, action="", excluded_scopes=["comment", "string"]):
-
-        # I don't like enforcing the context parameters on users, it may not
-        # be straightforward.
+        # I don't like enforcing the context parameters on users, we technically
+        # can determine them ourselves
         if action == "":
             action = self.determine_action_from_context()
 
@@ -183,11 +182,17 @@ class BetterFindNext(sublime_plugin.TextCommand):
         if has_region(self.view, REGION_KEY):
             return "add_next"
 
-        # TODO: Do we only want to allow starting when a single cursor is there?
-        if len(sels) == 1 and len(sels[-1]) == 0:
-            return "start_full_word"
-        elif len(sels) == 1 and len(sels[-1]) != 0:
-            return "start_partial_selection"
+        # TODO: Do we only want to allow starting when a single cursor is there? We can do it
+        # like the default ctrl+d and just start looking for the lowest selection and keep the
+        # mismatched ones. That may get convoluted though...
+        single_selection = len(sels) == 1
+        empty_selection = len(sels[-1]) == 0
+
+        if single_selection:
+            if empty_selection:
+                return "start_full_word"
+            else:
+                return "start_partial_selection"
 
 
 class ClearBetterFindSelection(sublime_plugin.TextCommand):
