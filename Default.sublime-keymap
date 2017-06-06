@@ -1,21 +1,5 @@
 [
-    // { "keys": ["ctrl+w"], "command": "better_find_next", "args": {"action": "start"}, "context":
-    //     [
-    //         { "key": "selection_empty", "operator": "equal", "operand": true, "match_all": true },
-    //         { "key": "num_selections", "operator": "equal", "operand": 1}
-    //     ]
-    // },
-    // { "keys": ["ctrl+w"], "command": "better_find_next", "args": {"action": "add_next"}, "context":
-    //     [
-    //         {"key": "has_region", "operand": "find_region"}
-    //     ]
-    // },
     { "keys": ["ctrl+w"], "command": "better_find_next", "args": {"excluded_scopes": ["comment", "string"]}},
-    { "keys": ["alt+q"], "command": "better_find_next" , "context":
-        [
-            { "key": "selector", "operator": "not_equal", "operand": "comment", "match_all": true }
-        ]
-    },
     { "keys": ["escape"], "command": "clear_better_find_selection",
         "context":
         [
