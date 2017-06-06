@@ -197,16 +197,19 @@ class BetterFindNext(sublime_plugin.TextCommand):
 
 class ClearBetterFindSelection(sublime_plugin.TextCommand):
     def run(self, edit):
-        # TODO: Go back to starting selection maybe?
-        if len(self.view.sel()) == 1:
-            single_selection = self.view.sel()[0]
-            end = single_selection.end()
-            single_selection.a = end - 1
-            single_selection.b = end - 1
-            self.view.sel().subtract(self.view.sel()[0])
-            self.view.sel().add(single_selection)
-
         self.view.erase_regions(REGION_KEY)
+        if len(self.view.sel()) != 1:
+            new_selections = []
+            for sel in self.view.sel():
+                end = sel.end()
+                sel.a = end - 1
+                sel.b = end - 1
+                new_selections.append(sel)
+            self.view.sel().clear()
+            self.view.sel().add_all(new_selections)
+        else:
+            # Not needed if command is mapped to escape but no harm in running it twice
+            self.view.run_command("single_selection")
 
 
 class BetterFindNextEventListener(sublime_plugin.ViewEventListener):
