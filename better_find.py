@@ -81,7 +81,7 @@ def keep_region(view, region, selecting_full_word, scope_filters):
         # like pprint when searching for print
         keep = check_if_full_word(view, region)
 
-    scope = view.scope_name(region.b)
+    scope = view.scope_name(region.begin())
 
     return keep and not check_if_any_scope(scope, scope_filters)
 
