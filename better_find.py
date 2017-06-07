@@ -63,17 +63,18 @@ def find_index_of_selection(regions, selection):
     return next_selection_idx
 
 
-def filter_regions(view, regions, selecting_full_word, starting_selection):
+def filter_regions(view, regions, selecting_full_word, starting_selection, scope_filters):
     filtered_regions = []
     for region in regions:
-        if not keep_region(view, region, selecting_full_word):
+        print(region)
+        if not keep_region(view, region, selecting_full_word, scope_filters):
             continue
         filtered_regions.append(region)
 
     return filtered_regions
 
 
-def keep_region(view, region, selecting_full_word, scope_filters=["comment", "string"]):
+def keep_region(view, region, selecting_full_word, scope_filters):
     keep = True
     if selecting_full_word:
         # if we are selecting the full word, make sure we didn't get partial matches
@@ -137,7 +138,7 @@ class BetterFindNext(sublime_plugin.TextCommand):
         regions = self.view.find_all(selectionText, flags=sublime.LITERAL)
 
         filtered_regions = filter_regions(self.view, regions, expand_selection_to_word,
-                                          starting_selection)
+                                          starting_selection, excluded_scopes)
 
         next_selection_idx = find_index_of_selection(filtered_regions, starting_selection)
 
