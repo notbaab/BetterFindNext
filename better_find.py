@@ -112,6 +112,14 @@ def get_next_sel_idx(view):
     return sel["next_region_idx"]
 
 
+class Testing(sublime_plugin.TextCommand):
+    def run(self, edit):
+        self.view.erase_regions("other")
+        point = self.view.sel()[-1].end()
+        region = [self.view.extract_scope(point)]
+        self.view.add_regions("other", region, "source")
+
+
 class BetterFindNext(sublime_plugin.TextCommand):
     def start(self, excluded_scopes, expand_selection_to_word):
         """Starts the better find next operation
