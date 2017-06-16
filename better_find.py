@@ -30,7 +30,7 @@ def recalculate_find_next_region(view):
             return
 
     # so the selections are the same, get the next selection and shrink it
-    # down to the new selection size and redue the find next region
+    # down to the new selection size and reduce the find next region
     regions = view.get_regions(REGION_KEY)
     idx = get_next_sel_idx(view)
     next_selection = regions[idx]
@@ -65,8 +65,8 @@ def find_index_of_selection(regions, selection):
 
 def filter_regions(view, regions, selecting_full_word, starting_selection, scope_filters):
     filtered_regions = []
+
     for region in regions:
-        print(region)
         if not keep_region(view, region, selecting_full_word, scope_filters):
             continue
         filtered_regions.append(region)
