@@ -1,5 +1,5 @@
 [
-    { "keys": ["ctrl+w"], "command": "better_find_next", "args": {"excluded_scopes": ["comment", "string"]}},
+    { "keys": ["alt+i"], "command": "better_find_next", "args": {"excluded_scopes": ["comment", "string"]}},
     { "keys": ["escape"], "command": "clear_better_find_selection",
         "context":
         [

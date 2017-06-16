@@ -11,7 +11,7 @@ BetterFindNext is aims to be a smarter version of the built in find_next (super+
 
 ## Default Key bindings and Behavior 
 
-By default, the shortcut maps to `ctrl+w` and ignores adding strings or comments. 
+By default, the shortcut maps to `alt+i` and ignores adding strings or comments. 
 
 ## Ignore Options
 The key binding accepts a list of scopes as it's `excluded_scopes` args. For Example, if you want to not include `constant` scope, you would define a mapping like so 
