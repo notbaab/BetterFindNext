@@ -1,9 +1,15 @@
 [
     { "keys": ["alt+i"], "command": "better_find_next", "args": {"excluded_scopes": ["comment", "string"]}},
-    { "keys": ["escape"], "command": "clear_better_find_selection",
-        "context":
+    {
+        "keys": ["escape"], "command": "clear_better_find_selection", "context":
         [
-            {"key": "has_region", "operand": "find_region"}
+            { "key": "has_next_field", "operator": "not_equal", "operand": true },
+            { "key": "has_prev_field", "operator": "not_equal", "operand": true },
+            { "key": "panel_visible", "operator": "not_equal", "operand": true },
+            { "key": "overlay_visible", "operator": "not_equal", "operand": true },
+            { "key": "popup_visible", "operator": "not_equal", "operand": true },
+            { "key": "auto_complete_visible", "operator": "not_equal", "operand": true },
+            { "key": "has_region", "operand": "find_region" }
         ]
     }
 ]
