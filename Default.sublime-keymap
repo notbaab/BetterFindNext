@@ -1,7 +1,8 @@
 [
-    { "keys": ["alt+i"], "command": "better_find_next", "args": {"excluded_scopes": ["comment", "string"]}},
-    {
-        "keys": ["escape"], "command": "clear_better_find_selection", "context":
+    { "keys": ["ctrl+w"], "command": "better_find_next", "args": {"excluded_scopes": ["comment", "string"]}},
+    { "keys": ["alt+i"], "command": "testing"},
+    { "keys": ["escape"], "command": "clear_better_find_selection",
+        "context":
         [
             { "key": "has_next_field", "operator": "not_equal", "operand": true },
             { "key": "has_prev_field", "operator": "not_equal", "operand": true },
