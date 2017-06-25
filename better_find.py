@@ -112,12 +112,44 @@ def get_next_sel_idx(view):
     return sel["next_region_idx"]
 
 
+def get_region_at_current_indention(starting_pt, view):
+    level = view.indentation_level(starting_pt)
+    line_region = view.line(starting_pt)
+
+    # go up until you aren't at the indention level anymore
+    upper_line = line_region.begin() - 1
+    upper_line_region = view.line(upper_line)
+    upper_level = view.indentation_level(upper_line)
+
+    lower_line = line_region.end() + 1
+    lower_line_region = view.line(lower_line)
+    lower_level = view.indentation_level(lower_line)
+    print("upper")
+    print(upper_line_region)
+    print(upper_level)
+    print("current")
+    print(line_region)
+    print(level)
+    print("lower")
+    print(lower_line_region)
+    print(lower_level)
+    print("done")
+
+
 class Testing(sublime_plugin.TextCommand):
     def run(self, edit):
+        start = self.view.sel()[-1].end()
+        get_region_at_current_indention(start, self.view)
+        print(str(self.view.indentation_level(self.view.sel()[-1].end())))
+        get_region_at_current_indention
         self.view.erase_regions("other")
         point = self.view.sel()[-1].end()
+        scope = self.view.extract_scope(point)
+        name = self.view.scope_name(point)
+        print(name)
+        print(scope)
         region = [self.view.extract_scope(point)]
-        self.view.add_regions("other", region, "source")
+        # self.view.add_regions("other", region, "source")
 
 
 class BetterFindNext(sublime_plugin.TextCommand):
